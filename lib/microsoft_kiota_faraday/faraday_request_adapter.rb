@@ -45,8 +45,9 @@ module MicrosoftKiotaFaraday
     end
 
     def send_async(request_info, factory, errors_mapping)
+      is_delete_request = request_info.http_method == :DELETE
       raise StandardError, 'request_info cannot be null' unless request_info
-      raise StandardError, 'factory cannot be null' unless factory
+      raise StandardError, 'factory cannot be null' if !factory and !is_delete_request
 
       Fiber.new do
         set_base_url_for_request_information(request_info)
@@ -57,8 +58,10 @@ module MicrosoftKiotaFaraday
         response_handler = self.get_response_handler(request_info)
         response_handler.call(response).resume unless response_handler.nil?
         self.throw_if_failed_reponse(response, errors_mapping)
-        root_node = self.get_root_parse_node(response)
-        root_node.get_object_value(factory)
+        if !is_delete_request
+          root_node = self.get_root_parse_node(response)
+          root_node.get_object_value(factory)
+        end
       end
     end
 
